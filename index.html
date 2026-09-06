@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workforce Readiness - Community Moderation & Compliance Queue</title>
+    <!-- Cloudflare Turnstile API -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background: #121212; color: #00ffcc; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        #game-container { background: #1a1a1a; border: 3px solid #00ffcc; border-radius: 8px; width: 100%; max-width: 650px; padding: 25px; box-shadow: 0 0 25px rgba(0, 255, 204, 0.2); }
+        h1 { font-size: 22px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; text-align: center; color: #fff; }
+        .subtitle { font-size: 12px; color: #888; text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+
+        .score-board { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 16px; border-bottom: 2px dashed #00ffcc; padding-bottom: 10px; }
+
+        #case-panel { background: #222; border: 2px solid #444; border-radius: 6px; padding: 20px; margin-bottom: 15px; position: relative; }
+        .case-header { font-size: 11px; color: #ffcc00; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
+        #case-text { font-size: 15px; line-height: 1.5; color: #e0e0e0; margin-bottom: 15px; }
+
+        .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; font-size: 12px; }
+        .ai-box { background: #111; border: 1px solid #333; padding: 10px; border-radius: 4px; }
+        .ai-box strong { color: #00ffcc; display: block; margin-bottom: 4px; }
+
+        .advisors { font-size: 12px; background: #181818; border-left: 3px solid #ffcc00; padding: 10px; margin-bottom: 15px; color: #ccc; }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background: #000; color: #00ffcc; border: 2px solid #00ffcc; padding: 12px; font-size: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.2s; border-radius: 4px; text-align: center; }
+        button:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
+        button:active { transform: scale(0.98); }
+
+        #feedback { font-size: 15px; margin-top: 15px; min-height: 25px; font-weight: bold; text-align: center; }
+        .correct { color: #00ffcc; }
+        .wrong { color: #ff3333; text-shadow: 0 0 5px #ff3333; }
+
+        #screen-verification, #screen-start, #screen-game, #screen-gameover { display: none; }
+        .visible { display: block !important; }
+
+        .instructions { font-size: 13px; color: #aaa; text-align: left; margin: 15px 0; line-height: 1.4; }
+        .ver-box { display: flex; flex-direction: column; align-items: center; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+
+    <!-- STEP 1: HUMAN BOT VERIFICATION (Cloudflare Turnstile) -->
+    <div id="screen-verification" class="visible">
+        <h1>Security Check</h1>
+        <div class="subtitle">Regional Human Verification</div>
+        <div class="instructions">
+            Please complete the security check below to verify access to the Kentucky Regional Training and Sub-Committee Volunteer portal.
+        </div>
+        <div class="ver-box">
+            <!-- Replace data-sitekey with your actual Cloudflare Turnstile Site Key when deployed -->
+            <div class="cf-turnstile" data-sitekey="10000000-0000-0000-0000-000000000001" data-callback="onTurnstileSuccess"></div>
+        </div>
+        <button id="btn-proceed" onclick="proceedToStart()" style="opacity: 0.5; pointer-events: none; width: 100%;">Awaiting Verification...</button>
+    </div>
+
+    <!-- STEP 2: START SCREEN -->
+    <div id="screen-start">
+        <h1>Archival Intake & Compliance</h1>
+        <div class="subtitle">Subcommittee Training Pipeline</div>
+        <div class="instructions">
+            <strong>MISSION PROTOCOL:</strong><br>
+            You are reviewing borderline community records and flagged submissions. Evaluate dueling AI model outputs, weigh advice from the Advisory Council (Teacher, Elder, Scholar, Traveler), and pass Sheriff Jones's compliance audit before routing items to the administrative desk.<br><br>
+            Accumulate 3 compliance failures and your audit session will terminate.
+        </div>
+        <button onclick="startGame()" style="width: 100%;">Initialize Training Queue</button>
+    </div>
+
+    <!-- STEP 3: GAMEPLAY QUEUE -->
+    <div id="screen-game">
+        <div class="score-board">
+            <div>CASES CLEARED: <span id="score">0</span></div>
+            <div>COMPLIANCE STRIKES: <span id="strikes">0</span>/3</div>
+        </div>
+
+        <div id="case-panel">
+            <div class="case-header" id="case-meta">Queue Item #1</div>
+            <div id="case-text">Loading incoming submission record...</div>
+
+            <div class="ai-grid">
+                <div class="ai-box">
+                    <strong>Model Alpha (Literal)</strong>
+                    <span id="ai-alpha">...</span>
+                </div>
+                <div class="ai-box">
+                    <strong>Model Beta (Contextual)</strong>
+                    <span id="ai-beta">...</span>
+                </div>
+            </div>
+
+            <div class="advisors" id="advisor-notes">
+                <strong>Advisory Council Consensus:</strong> Loading insights...
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="handleRuling(true)" style="border-color: #ff3333; color: #ff3333;">🔒 Reject / Flag PII</button>
+            <button onclick="handleRuling(false)">✅ Approve to Vault</button>
+        </div>
+
+        <div id="feedback"></div>
+    </div>
+
+    <!-- STEP 4: GAME OVER / CERTIFICATION SCREEN -->
+    <div id="screen-gameover">
+        <h1>Audit Suspended</h1>
+        <div class="subtitle" style="color: #ff3333;">Compliance Protocol Breached</div>
+        <p style="margin: 20px 0; font-size: 14px; color: #aaa; text-align: center;">
+            Maximum compliance strikes reached. Review archival standards and re-initialize core training.
+        </p>
+        <p style="font-size: 18px; margin-bottom: 20px; text-align: center;">Final Cases Cleared: <span id="final-score">0</span></p>
+        <button onclick="restartWorkflow()" style="width: 100%;">Restart Training Queue</button>
+    </div>
+
+</div>
+
+<script>
+    const trainingQueue = [
+        {
+            text: "1850 Slave Schedule / Tax Ledger: Mention of land ownership holdings along the Dix River, Lincoln County. No living modern identifiers listed.",
+            alpha: "Approve - Historical Record",
+            beta: "Approve - Public Domain",
+            advisors: "Scholar & Elder note: Clean historical dataset. Safe for public archival repository.",
+            shouldReject: false,
+            meta: "Archival Record #402"
+        },
+        {
+            text: "Modern Community Board Post: 'Looking for relatives of William Vance who passed in Somerset last week. Contact daughter Sarah at s_vance99@yahoo.com or cell 606-555-0192.'",
+            alpha: "Approve - Public Genealogy Request",
+            beta: "Reject - Unmasked PII & Contact Data",
+            advisors: "Teacher & Sheriff Jones note: Contains unmasked modern PII and direct phone/email data. Fails privacy compliance.",
+            shouldReject: true,
+            meta: "Social Media Intake #881"
+        },
+        {
+            text: "Excerpt from 'Pioneer Families of the Bluegrass' published in 2018 with explicit copyright notice reserving all digital distribution rights.",
+            alpha: "Approve - Educational History",
+            beta: "Reject - Copyright Violation Risk",
+            advisors: "Traveler & Scholar note: Protected modern text under active copyright. Cannot be hosted without clearance.",
+            shouldReject: true,
+            meta: "Publication Audit #119"
+        },
+        {
+            text: "1937 General Highway Survey Field Map: Knox County route coordinates, schoolhouse waypoints, and natural landmarks mapped in pencil.",
+            alpha: "Approve - Geographic Metadata",
+            beta: "Approve - Historic Blueprint",
+            advisors: "Elder & Traveler note: Essential infrastructure history with zero private personal identifiers.",
+            shouldReject: false,
+            meta: "Geographic Record #210"
+        },
+        {
+            text: "Volunteer Roster Draft (Internal): Grant Assistant applicant list including names, home addresses, and personal banking clearance notes.",
+            alpha: "Approve - Administrative File",
+            beta: "Reject - Internal Restricted Data",
+            advisors: "Sheriff Jones note: Internal administrative records must remain quarantined away from public feeds.",
+            shouldReject: true,
+            meta: "Internal Board Docket #09"
+        }
+    ];
+
+    let currentPool = [];
+    let currentCase = {};
+    let score = 0;
+    let strikes = 0;
+
+    // Called automatically when Cloudflare Turnstile verifies the user successfully
+    function onTurnstileSuccess(token) {
+        const btn = document.getElementById('btn-proceed');
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.innerText = 'Proceed to Training Portal';
+    }
+
+    function proceedToStart() {
+        document.getElementById('screen-verification').classList.remove('visible');
+        document.getElementById('screen-start').classList.add('visible');
+    }
+
+    function startGame() {
+        score = 0;
+        strikes = 0;
+        currentPool = [...trainingQueue];
+        document.getElementById('score').innerText = score;
+        document.getElementById('strikes').innerText = strikes;
+        document.getElementById('feedback').innerText = '';
+
+        switchScreen('screen-game');
+        loadNextCase();
+    }
+
+    function switchScreen(screenId) {
+        document.getElementById('screen-verification').classList.remove('visible');
+        document.getElementById('screen-start').classList.remove('visible');
+        document.getElementById('screen-game').classList.remove('visible');
+        document.getElementById('screen-gameover').classList.remove('visible');
+        document.getElementById(screenId).classList.add('visible');
+    }
+
+    function loadNextCase() {
+        if (currentPool.length === 0) {
+            currentPool = [...trainingQueue]; // Loop deck
+        }
+        const index = Math.floor(Math.random() * currentPool.length);
+        currentCase = currentPool.splice(index, 1)[0];
+
+        document.getElementById('case-meta').innerText = currentCase.meta;
+        document.getElementById('case-text').innerText = currentCase.text;
+        document.getElementById('ai-alpha').innerText = currentCase.alpha;
+        document.getElementById('ai-beta').innerText = currentCase.beta;
+        document.getElementById('advisor-notes').innerHTML = `<strong>Advisory Council Consensus:</strong> ${currentCase.advisors}`;
+        document.getElementById('feedback').innerText = '';
+    }
+
+    function handleRuling(userRejected) {
+        const feedback = document.getElementById('feedback');
+
+        if (userRejected === currentCase.shouldReject) {
+            score++;
+            document.getElementById('score').innerText = score;
+            feedback.className = 'correct';
+            feedback.innerText = '✓ COMPLIANCE CONSENSUS VERIFIED CORRECT';
+        } else {
+            strikes++;
+            document.getElementById('strikes').innerText = strikes;
+            feedback.className = 'wrong';
+            feedback.innerText = '✗ AUDIT ERROR: SHERIFF JONES COMPLIANCE BREACH';
+        }
+
+        if (strikes >= 3) {
+            setTimeout(() => {
+                document.getElementById('final-score').innerText = score;
+                switchScreen('screen-gameover');
+            }, 1200);
+        } else {
+            setTimeout(loadNextCase, 1500);
+        }
+    }
+
+    function restartWorkflow() {
+        switchScreen('screen-start');
+    }
+
+    // Initialize display state on load
+    window.onload = function() {
+        document.getElementById('screen-verification').classList.add('visible');
+    };
+</script>
+
+</body>
+</html>
