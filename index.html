@@ -1452,10 +1452,23 @@ let currentLevelIdx = 0;
 let currentStop = 0; // 0 = intro
 let quizAnswers = {}; // keyed by `${levelIdx}-${stop}`
 let unlockedLevels = [true, false, false, false];
-let gateUnlocked = [false, false, false, false]; // has the reading gate been passed for this level?
+
+function loadGateUnlocked(){
+  return LEVELS.map(lvl => {
+    try { return localStorage.getItem('khgn_gate_passed_level_' + lvl.id) === 'true'; }
+    catch(e) { return false; } // localStorage unavailable (e.g. private browsing edge cases) — fail safe to locked
+  });
+}
+function saveGatePassed(levelId){
+  try { localStorage.setItem('khgn_gate_passed_level_' + levelId, 'true'); }
+  catch(e) { /* storage unavailable — gate just won't persist across reloads for this user */ }
+}
+
+let gateUnlocked = [false, false, false, false]; // has the reading gate been passed for this level? (overwritten below once LEVELS exists)
 let gateTimerInterval = null;
 let gateElapsedSeconds = 0;
 let gateScrolledToEnd = false;
+let gateTimerStartedFor = null; // which level index the currently-running timer belongs to
 
 function levelKey(stop){ return currentLevelIdx + '-' + stop; }
 
@@ -1732,6 +1745,7 @@ function updateGateStatus(){
 function passGate(){
   clearGateTimer();
   gateUnlocked[currentLevelIdx] = true;
+  saveGatePassed(LEVELS[currentLevelIdx].id);
   currentStop = 0;
   render();
 }
@@ -1745,7 +1759,14 @@ function render(){
   if(!gateUnlocked[currentLevelIdx]){
     trailWrap.style.display = 'none';
     stage.innerHTML = renderGate();
-    startGateTimer();
+    if(gateTimerStartedFor !== currentLevelIdx){
+      // First time landing on this level's gate this session — start counting from zero.
+      startGateTimer();
+      gateTimerStartedFor = currentLevelIdx;
+    } else {
+      // Already counting for this level (e.g. re-clicking its own tab) — just refresh the display, don't reset progress.
+      updateGateStatus();
+    }
     return;
   }
   clearGateTimer();
@@ -1811,6 +1832,7 @@ function playNarration(clipId){
   alert('Placeholder: wire this button to your recorded voiceover file for "' + clipId + '".');
 }
 
+gateUnlocked = loadGateUnlocked(); // restore any levels whose 50-minute reading was already completed on this device
 render();
 </script>
 </body>
