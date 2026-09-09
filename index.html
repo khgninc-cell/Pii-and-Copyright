@@ -152,9 +152,10 @@
   .final-question{ background:rgba(0,0,0,0.05); border-radius:10px; padding:16px; margin-top:6px; }
 
   .footer-note{
-    text-align:center; font-size:11.5px; color:var(--parchment-dim); opacity:.55;
-    margin-top:18px; line-height:1.5;
+    text-align:center; font-size:13px; color:var(--parchment); opacity:1;
+    margin-top:18px; line-height:1.6;
   }
+  .footer-note strong{ color:var(--brass-bright); }
 
   .complete-screen{ text-align:center; }
   .complete-screen .badge{
@@ -195,8 +196,15 @@
     padding:10px 12px; margin-bottom:14px; line-height:1.5; font-style:italic;
   }
   .primary-btn:disabled{
-    background:#8A7A68; color:#EDE0C8; opacity:1; cursor:not-allowed;
+    background:var(--walnut-deep); color:var(--brass-bright); opacity:1; cursor:not-allowed;
+    border:1px solid var(--brass);
   }
+  .completion-disclaimer{
+    text-align:left; font-size:14px; line-height:1.65; color:var(--ink); font-weight:500;
+    background:#F2D9D4; border:1.5px solid var(--rust);
+    border-radius:8px; padding:14px 16px; margin:16px 0;
+  }
+  .completion-disclaimer strong{ color:var(--rust); }
 </style>
 </head>
 <body>
@@ -213,7 +221,10 @@
 
   <div class="footer-note">
     Kentucky History &amp; Genealogy Network, Inc. — Volunteer Field Training Program<br>
-    Failing the Sheriff's final chance at any waypoint returns you to the start of that level.
+    Failing the Sheriff's final chance at any waypoint returns you to the start of that level.<br><br>
+    <strong>This training is an internal educational orientation for KHGN volunteers only.</strong>
+    It is not an accredited certification, professional credential, or license of any kind, and
+    completion does not represent legal advice or KHGN's endorsement as an accrediting body.
   </div>
 </div>
 
@@ -1649,6 +1660,12 @@ function renderLevelComplete(){
         : `You've cleared all ${TOTAL_STOPS} waypoints of ${lvl.topic}. Level ${lvl.id + 1}: ${LEVELS[currentLevelIdx+1].topic} awaits.`}
     </p>`;
   if(isLastLevel){
+    html += `<div class="completion-disclaimer">
+      <strong>Please note:</strong> this completion badge reflects an internal KHGN volunteer
+      orientation only. It is <strong>not</strong> an accredited certification, professional
+      credential, or license recognized outside KHGN, and does not substitute for KHGN's separate,
+      more rigorous Tier 2 (specialty volunteer) or Tier 3 (accreditation-track) programs.
+    </div>`;
     html += `<div id="volunteer-form-hook">KHGN staff: embed your volunteer sign-up / contact form here.</div>`;
   } else {
     html += `<button class="primary-btn" onclick="goToNextLevel()">Continue to Level ${lvl.id + 1}</button>`;
