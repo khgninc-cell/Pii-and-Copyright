@@ -39,6 +39,7 @@
         
         .instructions { font-size: 13px; color: #aaa; text-align: left; margin: 15px 0; line-height: 1.4; }
         .ver-box { display: flex; flex-direction: column; align-items: center; margin: 20px 0; }
+        .fallback-note { font-size: 11px; color: #666; text-align: center; margin-top: 10px; min-height: 14px; }
     </style>
 </head>
 <body>
@@ -57,6 +58,7 @@
             <div class="cf-turnstile" data-sitekey="10000000-0000-0000-0000-000000000001" data-callback="onTurnstileSuccess"></div>
         </div>
         <button id="btn-proceed" onclick="proceedToStart()" style="opacity: 0.5; pointer-events: none; width: 100%;">Awaiting Verification...</button>
+        <div class="fallback-note" id="fallback-note"></div>
     </div>
 
     <!-- STEP 2: START SCREEN -->
@@ -167,14 +169,37 @@
     let currentCase = {};
     let score = 0;
     let strikes = 0;
+    let verificationResolved = false;
 
     // Called automatically when Cloudflare Turnstile verifies the user successfully
     function onTurnstileSuccess(token) {
+        verificationResolved = true;
+        enableProceedButton('Proceed to Training Portal');
+        const note = document.getElementById('fallback-note');
+        if (note) note.innerText = '';
+    }
+
+    function enableProceedButton(labelText) {
         const btn = document.getElementById('btn-proceed');
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
-        btn.innerText = 'Proceed to Training Portal';
+        btn.innerText = labelText;
     }
+
+    // Fallback: if the Turnstile widget fails to load or verify within 5 seconds
+    // (e.g., blocked by network/firewall/ad-blocker), auto-enable access so the
+    // training portal remains usable.
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            if (!verificationResolved) {
+                enableProceedButton('Continue (Verification Unavailable)');
+                const note = document.getElementById('fallback-note');
+                if (note) {
+                    note.innerText = 'Security check could not load — proceeding in fallback mode.';
+                }
+            }
+        }, 5000);
+    });
 
     function proceedToStart() {
         document.getElementById('screen-verification').classList.remove('visible');
