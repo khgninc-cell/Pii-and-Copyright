@@ -190,6 +190,13 @@
   }
   .gate-row{ transition:color .2s ease; }
   .gate-row.gate-done{ color:var(--sage); font-weight:700; }
+  .gate-explainer{
+    font-size:12.5px; color:#6B5A42; background:rgba(0,0,0,0.04); border-radius:8px;
+    padding:10px 12px; margin-bottom:14px; line-height:1.5; font-style:italic;
+  }
+  .primary-btn:disabled{
+    background:#8A7A68; color:#EDE0C8; opacity:1; cursor:not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -1656,6 +1663,10 @@ function renderGate(){
       <div class="gate-row" id="scroll-indicator">○ Scroll to the end of the reading</div>
       <div class="gate-row" id="timer-indicator">○ Reading time: 00:00 / ${String(Math.floor(MIN_READ_SECONDS/60)).padStart(2,'0')}:00</div>
     </div>
+    <p class="gate-explainer">
+      This isn't broken — the trail deliberately stays locked until you've spent real time with the
+      reading and reached the end. The button below will light up on its own once both boxes above are checked.
+    </p>
     <button class="primary-btn" id="gate-continue-btn" disabled onclick="passGate()">Continue to the Trail</button>
   </div>`;
 }
@@ -1697,7 +1708,25 @@ function updateGateStatus(){
   const timeDone = gateElapsedSeconds >= MIN_READ_SECONDS;
   timerEl.textContent = (timeDone ? '✓' : '○') + ` Reading time: ${mm}:${ss} / ${totalMin}:00`;
   timerEl.classList.toggle('gate-done', timeDone);
-  if(btn) btn.disabled = !(gateScrolledToEnd && timeDone);
+  const unlocked = gateScrolledToEnd && timeDone;
+  if(btn){
+    btn.disabled = !unlocked;
+    if(unlocked){
+      btn.textContent = 'Continue to the Trail';
+    } else if(!gateScrolledToEnd && !timeDone){
+      const remaining = MIN_READ_SECONDS - gateElapsedSeconds;
+      const rmm = String(Math.floor(remaining/60)).padStart(2,'0');
+      const rss = String(remaining%60).padStart(2,'0');
+      btn.textContent = `🔒 Locked — scroll down & wait ${rmm}:${rss}`;
+    } else if(!gateScrolledToEnd){
+      btn.textContent = '🔒 Locked — scroll to the end to continue';
+    } else {
+      const remaining = MIN_READ_SECONDS - gateElapsedSeconds;
+      const rmm = String(Math.floor(remaining/60)).padStart(2,'0');
+      const rss = String(remaining%60).padStart(2,'0');
+      btn.textContent = `🔒 Locked — unlocks in ${rmm}:${rss}`;
+    }
+  }
 }
 
 function passGate(){
